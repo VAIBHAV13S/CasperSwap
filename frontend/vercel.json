@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/casper-node/:path*",
+      "destination": "/api/casper-node/:path*"
+    }
+  ]
+}

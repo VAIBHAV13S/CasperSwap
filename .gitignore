@@ -50,9 +50,11 @@ contracts/wasm/
 **/*.wasm
 
 # Database dumps / exports
-*.sql
 *.dump
-*.json
+*.sql
+*_dump.json
+*_export.json
+*neondb*.json
 
 # Misc
 .tmp/
