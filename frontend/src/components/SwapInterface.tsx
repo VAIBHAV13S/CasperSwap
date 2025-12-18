@@ -27,7 +27,9 @@ export const SwapInterface = () => {
     const [casperAddress, setCasperAddress] = useState<string>('');
     const [casperConnected, setCasperConnected] = useState(false);
 
-    const click = (clickRef as any)?.current ?? (clickRef as any);
+    const csprClickEnabled = import.meta.env.VITE_CSPRCLICK_ENABLED === 'true';
+
+    const click = csprClickEnabled ? ((clickRef as any)?.current ?? (clickRef as any)) : undefined;
     const {
         CLPublicKey,
         DeployUtil,
@@ -58,7 +60,7 @@ export const SwapInterface = () => {
         checkConnection();
         const interval = setInterval(checkConnection, 2000);
         return () => clearInterval(interval);
-    }, [clickRef]);
+    }, [clickRef, csprClickEnabled]);
 
     // Fetch exchange rate
     useEffect(() => {
@@ -270,16 +272,7 @@ export const SwapInterface = () => {
     const connectCasperWallet = async () => {
         console.log('Connect clicked');
 
-        // 1. Try SDK (CSPR.click)
-        if (click) {
-            try {
-                console.log('Attempting SDK signIn...');
-                await click.signIn();
-                return;
-            } catch (err: any) {
-                console.error('SDK signIn failed:', err);
-            }
-        }
+        // 1. Prefer CasperWalletProvider (works without cspr.click config)
         if ((window as any).CasperWalletProvider) {
             try {
                 const provider = (window as any).CasperWalletProvider();
@@ -291,6 +284,17 @@ export const SwapInterface = () => {
             } catch (err: any) {
                 alert('Connection failed: ' + err.message);
                 return;
+            }
+        }
+
+        // 2. Optional: cspr.click SDK (requires cspr.click project/template config)
+        if (click) {
+            try {
+                console.log('Attempting SDK signIn...');
+                await click.signIn();
+                return;
+            } catch (err: any) {
+                console.error('SDK signIn failed:', err);
             }
         }
         if (typeof window !== 'undefined' && (window as any).csprclick) {
