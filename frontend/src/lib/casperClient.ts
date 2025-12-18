@@ -1,8 +1,11 @@
-import { CasperClient, Contracts, RuntimeArgs, CLValueBuilder, CLPublicKey, DeployUtil } from 'casper-js-sdk';
+import * as CasperSDK from 'casper-js-sdk';
 
-const NODE_URL = 'http://localhost:11101/rpc'; // Testnet node
-const client = new CasperClient(NODE_URL);
-const contractClient = new Contracts.Contract(client);
+const NODE_URL = typeof window !== 'undefined'
+    ? `${window.location.origin}/casper-node/rpc`
+    : 'https://node.testnet.casper.network/rpc';
+
+const client = new (CasperSDK as any).CasperClient(NODE_URL);
+const contractClient = new (CasperSDK as any).Contracts.Contract(client);
 
 export const getAccountBalance = async (publicKeyHex: string) => {
     try {
@@ -24,17 +27,17 @@ export const createDepositDeploy = (
 ) => {
     contractClient.setContractHash(contractHash);
 
-    const args = RuntimeArgs.fromMap({
-        amount: CLValueBuilder.u256(amount),
-        to_chain: CLValueBuilder.string(toChain),
-        recipient: CLValueBuilder.string(recipient),
-        token: CLValueBuilder.string(tokenHash),
+    const args = (CasperSDK as any).RuntimeArgs.fromMap({
+        amount: (CasperSDK as any).CLValueBuilder.u256(amount),
+        to_chain: (CasperSDK as any).CLValueBuilder.string(toChain),
+        recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
+        token: (CasperSDK as any).CLValueBuilder.string(tokenHash),
     });
 
     const deploy = contractClient.callEntrypoint(
         'deposit',
         args,
-        CLPublicKey.fromHex(senderPublicKey),
+        (CasperSDK as any).CLPublicKey.fromHex(senderPublicKey),
         'casper-test',
         '10000000000',
         []

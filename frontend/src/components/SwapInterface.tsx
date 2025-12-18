@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useClickRef } from '@make-software/csprclick-react';
-import { CLPublicKey, DeployUtil, RuntimeArgs, CLValueBuilder, CLAccountHash, CasperServiceByJsonRPC } from 'casper-js-sdk';
+import * as CasperSDK from 'casper-js-sdk';
 import { CONTRACTS, ETH_LOCK_VAULT_ABI } from '../lib/contracts';
 import { Card } from './ui/Card';
 import { Button } from './ui/Button';
@@ -27,14 +27,24 @@ export const SwapInterface = () => {
     const [casperAddress, setCasperAddress] = useState<string>('');
     const [casperConnected, setCasperConnected] = useState(false);
 
+    const click = (clickRef as any)?.current ?? (clickRef as any);
+    const {
+        CLPublicKey,
+        DeployUtil,
+        RuntimeArgs,
+        CLValueBuilder,
+        CLAccountHash,
+        CasperServiceByJsonRPC
+    } = CasperSDK as any;
+
     // Check Casper wallet connection
     useEffect(() => {
         const checkConnection = async () => {
-            if (clickRef && clickRef.current) {
+            if (click) {
                 try {
-                    const isConnected = await clickRef.current.isConnected();
+                    const isConnected = await click.isConnected();
                     if (isConnected) {
-                        const account = await clickRef.current.getActivePublicKey();
+                        const account = await click.getActivePublicKey();
                         if (account) {
                             setCasperAddress(account);
                             setCasperConnected(true);
@@ -187,31 +197,31 @@ export const SwapInterface = () => {
             setIsProcessing(true);
             const contractHash = import.meta.env.VITE_CASPER_CONTRACT_HASH || 'e13f53fca445eadac96bc577779cf3c16b426832db8ec079308b4c313d1083aa';
             const amountInMotes = (parseFloat(amount) * 1e9).toString();
-            const zeroAddress = new CLAccountHash(new Uint8Array(32));
-            const runtimeArgs = RuntimeArgs.fromMap({
-                to_chain: CLValueBuilder.string('ethereum'),
-                token: CLValueBuilder.key(zeroAddress),
-                recipient: CLValueBuilder.string(recipient),
-                amount: CLValueBuilder.u256(amountInMotes)
+            const zeroAddress = new (CasperSDK as any).CLAccountHash(new Uint8Array(32));
+            const runtimeArgs = (CasperSDK as any).RuntimeArgs.fromMap({
+                to_chain: (CasperSDK as any).CLValueBuilder.string('ethereum'),
+                token: (CasperSDK as any).CLValueBuilder.key(zeroAddress),
+                recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
+                amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotes)
             });
             const contractHashBytes = Uint8Array.from(Buffer.from(contractHash, 'hex'));
-            const deploy = DeployUtil.makeDeploy(
-                new DeployUtil.DeployParams(
-                    CLPublicKey.fromHex(connectedKey),
+            const deploy = (CasperSDK as any).DeployUtil.makeDeploy(
+                new (CasperSDK as any).DeployUtil.DeployParams(
+                    (CasperSDK as any).CLPublicKey.fromHex(connectedKey),
                     'casper-test'
                 ),
-                DeployUtil.ExecutableDeployItem.newStoredContractByHash(
+                (CasperSDK as any).DeployUtil.ExecutableDeployItem.newStoredContractByHash(
                     contractHashBytes,
                     'deposit',
                     runtimeArgs
                 ),
-                DeployUtil.standardPayment(3000000000)
+                (CasperSDK as any).DeployUtil.standardPayment(3000000000)
             );
-            const deployJSON = DeployUtil.deployToJson(deploy);
+            const deployJSON = (CasperSDK as any).DeployUtil.deployToJson(deploy);
             let signedDeployJSON;
 
-            if (clickRef && clickRef.current && (await clickRef.current.isConnected())) {
-                signedDeployJSON = await clickRef.current.sign(JSON.stringify(deployJSON), connectedKey);
+            if (click && (await click.isConnected())) {
+                signedDeployJSON = await click.sign(JSON.stringify(deployJSON), connectedKey);
             } else if ((window as any).CasperWalletProvider) {
                 const provider = (window as any).CasperWalletProvider();
                 if (await provider.isConnected()) {
@@ -226,12 +236,12 @@ export const SwapInterface = () => {
                         signatureBytes = Uint8Array.from(Buffer.from(res.signature as any));
                     }
                     if (signatureBytes.length === 65) signatureBytes = signatureBytes.slice(1);
-                    const signedDeploy = DeployUtil.setSignature(
+                    const signedDeploy = (CasperSDK as any).DeployUtil.setSignature(
                         deploy,
                         signatureBytes,
-                        CLPublicKey.fromHex(connectedKey)
+                        (CasperSDK as any).CLPublicKey.fromHex(connectedKey)
                     );
-                    signedDeployJSON = DeployUtil.deployToJson(signedDeploy);
+                    signedDeployJSON = (CasperSDK as any).DeployUtil.deployToJson(signedDeploy);
                 } else {
                     throw new Error('Wallet not connected for signing');
                 }
@@ -239,8 +249,8 @@ export const SwapInterface = () => {
                 throw new Error('No wallet provider found for signing');
             }
 
-            const signedDeploy = DeployUtil.deployFromJson(signedDeployJSON).unwrap();
-            const casperService = new CasperServiceByJsonRPC(window.location.origin + '/casper-node');
+            const signedDeploy = (CasperSDK as any).DeployUtil.deployFromJson(signedDeployJSON).unwrap();
+            const casperService = new (CasperSDK as any).CasperServiceByJsonRPC(window.location.origin + '/casper-node');
             const result = await casperService.deploy(signedDeploy);
 
             if (result.deploy_hash) {
@@ -258,11 +268,17 @@ export const SwapInterface = () => {
     };
 
     const connectCasperWallet = async () => {
-        if (clickRef && clickRef.current) {
+        console.log('Connect clicked');
+
+        // 1. Try SDK (CSPR.click)
+        if (click) {
             try {
-                await clickRef.current.signIn();
+                console.log('Attempting SDK signIn...');
+                await click.signIn();
                 return;
-            } catch (err) { console.error(err); }
+            } catch (err: any) {
+                console.error('SDK signIn failed:', err);
+            }
         }
         if ((window as any).CasperWalletProvider) {
             try {
