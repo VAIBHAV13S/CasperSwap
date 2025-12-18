@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSPR.click Deep Debug</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            color: #eee;
+            font-family: monospace;
+            padding: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        pre {
+            background: #0d0d0d;
+            padding: 15px;
+            border: 1px solid #333;
+            overflow-x: auto;
+        }
+
+        .error {
+            color: #ff5555;
+        }
+
+        .success {
+            color: #55ff55;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🕵️ CSPR.click Deep Inspector</h1>
+
+    <button onclick="inspect()">Inspect window.csprclick</button>
+    <button onclick="tryConnect()">Try Connect (window.casperlabsHelper?)</button>
+
+    <div id="output"></div>
+
+    <script>
+        function log(msg, type = 'info') {
+            const div = document.createElement('div');
+            div.innerHTML = `<span style="color: #888">[${new Date().toLocaleTimeString()}]</span> ${msg}`;
+            if (type === 'error') div.style.color = '#ff5555';
+            if (type === 'success') div.style.color = '#55ff55';
+            document.getElementById('output').appendChild(div);
+        }
+
+        function inspect() {
+            log('--- Starting Inspection ---');
+
+            // Check csprclick
+            if (window.csprclick) {
+                log('✅ window.csprclick exists', 'success');
+                log('Type: ' + typeof window.csprclick);
+                try {
+                    const props = Object.getOwnPropertyNames(window.csprclick);
+                    log('Properties: ' + JSON.stringify(props, null, 2));
+
+                    // Check proto
+                    const proto = Object.getPrototypeOf(window.csprclick);
+                    log('Prototype props: ' + JSON.stringify(Object.getOwnPropertyNames(proto), null, 2));
+                } catch (e) {
+                    log('Error inspecting props: ' + e.message, 'error');
+                }
+            } else {
+                log('❌ window.csprclick is undefined', 'error');
+            }
+
+            // Check casperlabsHelper (legacy/alternative)
+            if (window.casperlabsHelper) {
+                log('✅ window.casperlabsHelper exists', 'success');
+                log('Properties: ' + JSON.stringify(Object.keys(window.casperlabsHelper)));
+            } else {
+                log('ℹ️ window.casperlabsHelper is undefined');
+            }
+
+            // Dump all window keys containing 'casper'
+            const allKeys = Object.keys(window);
+            const casperKeys = allKeys.filter(k => k.toLowerCase().includes('casper') || k.toLowerCase().includes('cspr'));
+            log('Global keys matching "casper/cspr": ' + JSON.stringify(casperKeys));
+        }
+
+        async function tryConnect() {
+            log('--- Trying Alternate Connection Methods ---');
+
+            // Method 1: casperlabsHelper
+            if (window.casperlabsHelper) {
+                log('Trying casperlabsHelper.requestConnection()...');
+                try {
+                    await window.casperlabsHelper.requestConnection();
+                    log('✅ casperlabsHelper connected!', 'success');
+                } catch (e) {
+                    log('❌ casperlabsHelper failed: ' + e.message, 'error');
+                }
+            }
+
+            // Method 2: csprclick.signIn ?
+            if (window.csprclick && window.csprclick.signIn) {
+                log('Trying csprclick.signIn()...');
+                try {
+                    await window.csprclick.signIn();
+                    log('✅ csprclick.signIn() success!', 'success');
+                } catch (e) {
+                    log('❌ csprclick.signIn() failed: ' + e.message, 'error');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

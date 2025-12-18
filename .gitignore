@@ -1,0 +1,59 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vs/
+.vscode/
+.idea/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+keys/
+**/*.pem
+**/*.key
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Node
+node_modules/
+**/node_modules/
+dist/
+build/
+.cache/
+.eslintcache
+
+# Vite
+frontend/dist/
+frontend/.vite/
+
+# TypeScript
+*.tsbuildinfo
+
+# Rust
+target
+target/
+**/target
+**/target/
+Cargo.lock
+
+# Casper / Odra build artifacts
+wasm/
+contracts/wasm/
+**/*.wasm
+
+# Database dumps / exports
+*.sql
+*.dump
+*.json
+
+# Misc
+.tmp/
+.temp/
