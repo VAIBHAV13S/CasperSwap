@@ -20,12 +20,13 @@
         "lucide-react": "^0.300.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "styled-components": "^6.1.19",
+        "styled-components": "^5.3.11",
         "tailwind-merge": "^2.6.0",
         "viem": "^2.0.0",
         "wagmi": "^2.0.0"
     },
     "devDependencies": {
+        "@types/styled-components": "^5.1.34",
         "@types/react": "^18.2.0",
         "@types/react-dom": "^18.2.0",
         "@vitejs/plugin-react": "^4.0.0",
