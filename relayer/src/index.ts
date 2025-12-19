@@ -4,6 +4,7 @@ import { EventWatcher } from './watchers/EventWatcher';
 import { CasperContractWatcher } from './watchers/CasperContractWatcher';
 import { SwapProcessor } from './core/SwapProcessor';
 import { PriceOracle } from './core/PriceOracle';
+import http from 'http';
 
 async function main() {
     console.log('');
@@ -64,6 +65,27 @@ async function main() {
     console.log('');
     console.log('Press Ctrl+C to stop');
     console.log('');
+
+    // Render free-tier Web Services require a bound port. This lightweight health server
+    // keeps the process alive without turning the relayer into a full API.
+    const port = Number(process.env.PORT || 0);
+    if (port) {
+        const server = http.createServer((req, res) => {
+            if (req.url === '/healthz') {
+                res.statusCode = 200;
+                res.setHeader('content-type', 'application/json');
+                res.end(JSON.stringify({ ok: true }));
+                return;
+            }
+
+            res.statusCode = 404;
+            res.end('Not Found');
+        });
+
+        server.listen(port, '0.0.0.0', () => {
+            console.log(`🩺 Health server listening on :${port} (GET /healthz)`);
+        });
+    }
 }
 
 main().catch(console.error);
