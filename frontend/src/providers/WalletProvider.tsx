@@ -31,15 +31,23 @@ const clickOptions = {
 };
 
 export const WalletProvider = ({ children }: { children: React.ReactNode }) => {
+    const csprClickEnabled = import.meta.env.VITE_CSPRCLICK_ENABLED === 'true';
+
+    const app = (
+        <WagmiProvider config={config}>
+            <QueryClientProvider client={queryClient}>
+                <RainbowKitProvider>
+                    {children}
+                </RainbowKitProvider>
+            </QueryClientProvider>
+        </WagmiProvider>
+    );
+
+    if (!csprClickEnabled) return app;
+
     return (
         <ClickProvider options={clickOptions}>
-            <WagmiProvider config={config}>
-                <QueryClientProvider client={queryClient}>
-                    <RainbowKitProvider>
-                        {children}
-                    </RainbowKitProvider>
-                </QueryClientProvider>
-            </WagmiProvider>
+            {app}
         </ClickProvider>
     );
 };

@@ -9,7 +9,15 @@ import { Button } from './ui/Button';
 import { ArrowUpDown, Wallet, Info, RefreshCw, ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const SwapInterface = () => {
+const SwapInterfaceInner = ({
+    clickRef,
+    click,
+    csprClickEnabled,
+}: {
+    clickRef?: any;
+    click?: any;
+    csprClickEnabled: boolean;
+}) => {
     const [fromChain, setFromChain] = useState('ethereum');
     const [toChain, setToChain] = useState('casper');
     const [amount, setAmount] = useState('');
@@ -23,13 +31,9 @@ export const SwapInterface = () => {
     const { writeContract } = useWriteContract();
 
     // Casper Wallet
-    const clickRef = useClickRef();
     const [casperAddress, setCasperAddress] = useState<string>('');
     const [casperConnected, setCasperConnected] = useState(false);
 
-    const csprClickEnabled = import.meta.env.VITE_CSPRCLICK_ENABLED === 'true';
-
-    const click = csprClickEnabled ? ((clickRef as any)?.current ?? (clickRef as any)) : undefined;
     const {
         CLPublicKey,
         DeployUtil,
@@ -507,4 +511,16 @@ export const SwapInterface = () => {
             </div>
         </Card>
     );
+};
+
+const SwapInterfaceWithClick = () => {
+    const clickRef = useClickRef();
+    const click = (clickRef as any)?.current ?? (clickRef as any);
+    return <SwapInterfaceInner clickRef={clickRef} click={click} csprClickEnabled={true} />;
+};
+
+export const SwapInterface = () => {
+    const csprClickEnabled = import.meta.env.VITE_CSPRCLICK_ENABLED === 'true';
+    if (csprClickEnabled) return <SwapInterfaceWithClick />;
+    return <SwapInterfaceInner csprClickEnabled={false} />;
 };
