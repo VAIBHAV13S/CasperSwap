@@ -256,7 +256,7 @@ const SwapInterfaceInner = ({
             }
 
             const signedDeploy = (CasperSDK as any).DeployUtil.deployFromJson(signedDeployJSON).unwrap();
-            const casperService = new (CasperSDK as any).CasperServiceByJsonRPC(window.location.origin + '/casper-node');
+            const casperService = new (CasperSDK as any).CasperServiceByJsonRPC(window.location.origin + '/api/casper-node');
             const result = await casperService.deploy(signedDeploy);
 
             if (result.deploy_hash) {

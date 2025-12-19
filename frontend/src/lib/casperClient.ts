@@ -1,7 +1,7 @@
 import * as CasperSDK from 'casper-js-sdk';
 
 const NODE_URL = typeof window !== 'undefined'
-    ? `${window.location.origin}/casper-node/rpc`
+    ? `${window.location.origin}/api/casper-node/rpc`
     : 'https://node.testnet.casper.network/rpc';
 
 const client = new (CasperSDK as any).CasperClient(NODE_URL);
