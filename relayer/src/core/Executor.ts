@@ -4,6 +4,7 @@ import { config } from '../config';
 import { Pool } from 'pg';
 import { PriceOracle } from './PriceOracle';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 
 export class Executor {
@@ -12,6 +13,34 @@ export class Executor {
     private ethWallet: ethers.Wallet;
     private db: Pool;
     private priceOracle: PriceOracle;
+
+    private loadCasperKeyPair() {
+        const pubPem = process.env.CASPER_PUBLIC_KEY_PEM;
+        const secPem = process.env.CASPER_SECRET_KEY_PEM;
+        if (pubPem && secPem) {
+            const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'casper-keys-'));
+            const pubPath = path.join(dir, 'public_key.pem');
+            const secPath = path.join(dir, 'secret_key.pem');
+            fs.writeFileSync(pubPath, pubPem, { encoding: 'utf8' });
+            fs.writeFileSync(secPath, secPem, { encoding: 'utf8' });
+            return (Keys as any).Ed25519.parseKeyFiles(pubPath, secPath);
+        }
+
+        const pubPathEnv = process.env.CASPER_PUBLIC_KEY_PATH;
+        const secPathEnv = process.env.CASPER_SECRET_KEY_PATH;
+        if (pubPathEnv && secPathEnv) {
+            return (Keys as any).Ed25519.parseKeyFiles(pubPathEnv, secPathEnv);
+        }
+
+        const keyPath = path.resolve(__dirname, '../../../keys/secret_key.pem');
+        const pubKeyPath = path.resolve(__dirname, '../../../keys/public_key.pem');
+        if (!fs.existsSync(keyPath) || !fs.existsSync(pubKeyPath)) {
+            throw new Error(
+                'Casper keys not found. Provide CASPER_PUBLIC_KEY_PEM/CASPER_SECRET_KEY_PEM (preferred) or CASPER_PUBLIC_KEY_PATH/CASPER_SECRET_KEY_PATH, or include keys/public_key.pem and keys/secret_key.pem in the service.'
+            );
+        }
+        return (Keys as any).Ed25519.parseKeyFiles(pubKeyPath, keyPath);
+    }
 
     constructor(db: Pool, priceOracle: PriceOracle) {
         this.db = db;
@@ -37,9 +66,7 @@ export class Executor {
 
     private async executeDirectCasperTransfer(swapId: string, recipient: string, amount: string): Promise<string | null> {
         try {
-            const keyPath = path.resolve(__dirname, '../../../keys/secret_key.pem');
-            const pubKeyPath = path.resolve(__dirname, '../../../keys/public_key.pem');
-            const keyPair = Keys.Ed25519.parseKeyFiles(pubKeyPath, keyPath);
+            const keyPair = this.loadCasperKeyPair();
             const recipientPublicKey = CLPublicKey.fromHex(recipient);
 
             const amountInMotes = this.priceOracle.convertEthToCspr(
