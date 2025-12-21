@@ -1,7 +1,21 @@
+import { useEffect, useRef } from 'react';
 import { WalletProvider } from './providers/WalletProvider';
 import { SwapInterface } from './components/SwapInterface';
 
 function App() {
+    const didWakeRef = useRef(false);
+
+    useEffect(() => {
+        if (didWakeRef.current) return;
+        didWakeRef.current = true;
+
+        const base = import.meta.env.VITE_RELAYER_URL as string | undefined;
+        if (!base) return;
+
+        const url = `${base.replace(/\/$/, '')}/healthz`;
+        fetch(url, { method: 'GET', mode: 'no-cors', keepalive: true }).catch(() => {});
+    }, []);
+
     return (
         <WalletProvider>
             <main className="relative min-h-screen w-full overflow-hidden flex flex-col items-center justify-center">
