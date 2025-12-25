@@ -4,13 +4,22 @@
 
 ### Casper Testnet
 - **RelayerRegistry package hash:** `hash-f3c06f7c6b4115ae6f6bb184f3b515977f5df709c025805766254aee8e5d1425`
-- **LockVault package hash:** `hash-692ca350badb6561c282026883ff17ed631774caf165094d7080f425570190e6`
+- **LockVault package hash:** `hash-f15600a2d4e9954d4c193b9c94daf3ad9edf7a16a366d9a6fa31ef75f40c9a7d`
+- **LockVault contract hash:** `contract-b19c3cc9547c21e669110e09ae59dc3ae3041254258b5f53d24afade0a4b539d`
 - **SwapRouter package hash:** `hash-9994ed499053221afc3e7727c7d01a20fb7b2c1162c80b91cbd32d24af3746a5`
 
 ### Ethereum Sepolia
 - **Contract Address:** `0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754`
 - **Deployer:** `0xD2e59333e77d7C6F7265A127444d825C6B74550a`
 - **Explorer:** https://sepolia.etherscan.io/address/0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754
+
+---
+
+## 🌐 Live Deployments
+
+- **Frontend (Vercel):** `<YOUR_VERCEL_URL>`
+- **Relayer (Render):** https://casperswap.onrender.com
+  - Health check: https://casperswap.onrender.com/healthz
 
 ---
 
@@ -29,7 +38,16 @@ Access at: http://localhost:5173
 ✅ Ethereum → Casper swaps (fully functional)
 ✅ Wallet integration (MetaMask + CSPR.click)
 ✅ Contract interaction with deployed addresses
-✅ Casper → Ethereum swaps (LockVault.deposit)
+✅ Casper → Ethereum swaps (LockVault.deposit is payable and escrows CSPR in vault purse)
+✅ Ethereum → Casper payouts via escrow (relayer calls LockVault.release; no direct transfer)
+
+---
+
+## 🔌 Casper RPC access (Vercel)
+
+The frontend uses a serverless proxy route on Vercel to access the Casper node JSON-RPC.
+
+- Browser RPC endpoint: `https://<YOUR_VERCEL_URL>/api/casper-node/rpc`
 
 ---
 
@@ -50,15 +68,22 @@ CasperSwap/
 
 ### Frontend (`.env`)
 ```ini
-VITE_CASPER_CONTRACT_HASH=76f1c326539d21277212e15397f1a95d10e41d9b0e2259309b2221f0930c6e8f
+VITE_CASPER_CONTRACT_HASH=contract-b19c3cc9547c21e669110e09ae59dc3ae3041254258b5f53d24afade0a4b539d
 VITE_ETHEREUM_CONTRACT_ADDRESS=0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754
 VITE_ETHEREUM_CHAIN_ID=11155111
+VITE_CSPRCLICK_ENABLED=false
+VITE_RELAYER_URL=https://casperswap.onrender.com
 ```
 
 ### Relayer (`relayer/src/config/index.ts`)
-- Configured with deployed contract addresses
-- Ready to monitor both chains
-- Event listeners set up
+- Runs as a long-running service on Render
+- Monitors both chains + processes swaps continuously while the service is awake
+- Uses Postgres for swap/event persistence
+
+Relayer env should include the Casper LockVault contract hash:
+```ini
+LOCK_VAULT_CONTRACT_HASH=contract-b19c3cc9547c21e669110e09ae59dc3ae3041254258b5f53d24afade0a4b539d
+```
 
 ---
 
@@ -81,6 +106,8 @@ npm run dev
 4. Click "Swap"
 5. Confirm transaction in MetaMask
 
+Payout is executed on Casper by the relayer calling `LockVault.release()`.
+
 ---
 
 ## 📊 Testing
@@ -91,6 +118,13 @@ npm run dev
 3. Enter Casper address as recipient
 4. Execute swap
 5. Check transaction on Etherscan
+
+### Test Casper Deposit (Casper → Ethereum)
+1. Connect a Casper wallet
+2. Enter amount in CSPR
+3. Enter Ethereum recipient address
+4. Execute swap (frontend calls `LockVault.deposit()` with `attached_value`)
+5. Relayer pays out ETH on Sepolia
 
 ### Verify on Explorer
 - **Ethereum:** https://sepolia.etherscan.io/address/0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754
@@ -122,24 +156,34 @@ npm run dev
 
 ---
 
+## 🟢 Production Relayer (Render)
+
+The deployed relayer is available at:
+
+- https://casperswap.onrender.com
+
+Note: Render free-tier services may sleep. The frontend can ping `/healthz` via `VITE_RELAYER_URL` to wake it.
+
+---
+
 ## 📝 Next Steps
 
 ### Phase 1: Testing ✅
 - [x] Deploy contracts to testnets
 - [x] Configure frontend
 - [x] Test Ethereum deposits
-- [ ] Test end-to-end swaps with relayer
+- [x] Test end-to-end swaps with relayer
 
 ### Phase 2: Casper Integration
-- [ ] Implement Casper deposit function
-- [ ] Add CSPR.click transaction signing
-- [ ] Test Casper → Ethereum swaps
+- [x] Implement Casper deposit function
+- [x] Add Casper transaction signing (Casper Wallet Provider; CSPR.click can be enabled via env)
+- [x] Test Casper → Ethereum swaps
 
 ### Phase 3: Relayer
-- [ ] Start PostgreSQL database
-- [ ] Run relayer service
-- [ ] Monitor cross-chain events
-- [ ] Automate swap completion
+- [x] Start PostgreSQL database
+- [x] Run relayer service
+- [x] Monitor cross-chain events
+- [x] Automate swap completion
 
 ### Phase 4: Production
 - [ ] Deploy to mainnet

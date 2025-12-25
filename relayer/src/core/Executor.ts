@@ -59,46 +59,56 @@ export class Executor {
         console.log('  Recipient:', recipient);
         console.log('  Amount (Wei):', amount);
 
-        // NOTE: The current LockVault contract's `release()` only emits an event and does not
-        // transfer any CSPR. To actually pay the recipient, we must use a native transfer.
-        return await this.executeDirectCasperTransfer(swapId, recipient, amount);
-    }
-
-    private async executeDirectCasperTransfer(swapId: string, recipient: string, amount: string): Promise<string | null> {
         try {
             const keyPair = this.loadCasperKeyPair();
-            const recipientPublicKey = CLPublicKey.fromHex(recipient);
 
+            const contractHashRaw = config.casper.contractHash || '';
+            const contractHash = contractHashRaw.startsWith('hash-')
+                ? contractHashRaw.slice('hash-'.length)
+                : contractHashRaw.startsWith('contract-')
+                    ? contractHashRaw.slice('contract-'.length)
+                    : contractHashRaw;
+
+            const contractHashBytes = Uint8Array.from(Buffer.from(contractHash, 'hex'));
+
+            // Convert ETH wei -> CSPR motes (string)
             const amountInMotes = this.priceOracle.convertEthToCspr(
                 ethers.formatEther(amount)
             );
+
+            const recipientPublicKey = CLPublicKey.fromHex(recipient);
+
+            const runtimeArgs = RuntimeArgs.fromMap({
+                swap_id: CLValueBuilder.u64(parseInt(swapId)),
+                recipient: CLValueBuilder.key(recipientPublicKey),
+                amount: CLValueBuilder.u256(amountInMotes)
+            });
 
             const deployParams = new DeployUtil.DeployParams(
                 keyPair.publicKey,
                 config.casper.networkName
             );
 
-            const payment = DeployUtil.standardPayment(100000000);
-            const session = DeployUtil.ExecutableDeployItem.newTransfer(
-                amountInMotes,
-                recipientPublicKey,
-                undefined,
-                parseInt(swapId)
+            const session = DeployUtil.ExecutableDeployItem.newStoredContractByHash(
+                contractHashBytes,
+                'release',
+                runtimeArgs
             );
 
+            const payment = DeployUtil.standardPayment(100000000);
             const deploy = DeployUtil.makeDeploy(deployParams, session, payment);
             const signedDeploy = DeployUtil.signDeploy(deploy, keyPair);
 
-            console.log('  Sending direct transfer...');
+            console.log('  Sending LockVault.release deploy...');
             const deployHash = await this.casperClient.putDeploy(signedDeploy);
 
-            console.log('  ✅ Direct transfer sent!');
+            console.log('  ✅ LockVault.release sent!');
             console.log('  Deploy Hash:', deployHash);
 
             await this.updateSwapStatus(swapId, 'COMPLETED', deployHash);
             return deployHash;
         } catch (err: any) {
-            console.error('  ❌ Direct transfer also failed:', err.message);
+            console.error('  ❌ LockVault.release failed:', err.message);
             await this.updateSwapStatus(swapId, 'FAILED', null);
             return null;
         }
@@ -127,23 +137,36 @@ export class Executor {
             console.log('    ETH:', ethers.formatEther(amountInWei));
             console.log('    Wei:', amountInWei);
 
-            // Create transaction
-            const tx = await this.ethWallet.sendTransaction({
-                to: recipient,
-                value: BigInt(amountInWei),
-                gasLimit: 21000
+            const ethLockVault = new ethers.Contract(
+                config.ethereum.contractAddress,
+                [
+                    'function release(uint256 swapId, address recipient, uint256 amount, bytes signature) external'
+                ],
+                this.ethWallet
+            );
+
+            const swapIdU256 = BigInt(swapId);
+            const amountU256 = BigInt(amountInWei);
+
+            const messageHash = ethers.solidityPackedKeccak256(
+                ['uint256', 'address', 'uint256'],
+                [swapIdU256, recipient, amountU256]
+            );
+            const signature = await this.ethWallet.signMessage(ethers.getBytes(messageHash));
+
+            console.log('  Calling EthLockVault.release...');
+            const tx = await ethLockVault.release(swapIdU256, recipient, amountU256, signature, {
+                gasLimit: 300000
             });
 
-            console.log('  Sending transaction...');
+            console.log('  Waiting for confirmation...');
             const receipt = await tx.wait();
 
-            console.log('  ✅ Transaction confirmed!');
+            console.log('  ✅ Release confirmed!');
             console.log('  Tx Hash:', receipt?.hash);
             console.log('  Explorer:', `https://sepolia.etherscan.io/tx/${receipt?.hash}`);
 
-            // Update database
             await this.updateSwapStatus(swapId, 'COMPLETED', receipt?.hash || '');
-
             return receipt?.hash || null;
         } catch (err: any) {
             console.error('  ❌ Ethereum release failed:', err.message);

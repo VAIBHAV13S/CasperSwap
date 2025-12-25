@@ -11,7 +11,7 @@ async function main() {
     console.log("Account balance:", hre.ethers.formatEther(balance), "ETH");
 
     // Use fully qualified name to avoid ambiguity
-    const EthLockVault = await hre.ethers.getContractFactory("contracts/EthLockVaultSimple.sol:EthLockVault");
+    const EthLockVault = await hre.ethers.getContractFactory("contracts/EthLockVault.sol:EthLockVault");
     const lockVault = await EthLockVault.deploy();
 
     await lockVault.waitForDeployment();

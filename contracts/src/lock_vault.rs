@@ -1,6 +1,10 @@
 use odra::casper_event_standard;
 use odra::prelude::*;
 use odra::casper_types::U256;
+use odra::casper_types::{U512, URef};
+use casper_contract::contract_api::{runtime, system};
+use casper_contract::contract_api::account::get_main_purse;
+use odra::casper_types::{account::AccountHash, ApiError};
 
 const MAX_TO_CHAIN_LEN: usize = 32;
 const MAX_RECIPIENT_LEN: usize = 128;
@@ -10,6 +14,8 @@ pub struct LockVault {
     pub deposits: Mapping<u64, Deposit>,
     pub next_swap_id: Var<u64>,
     pub relayer_registry: Var<Address>,
+    pub vault_purse: Var<URef>,
+    pub released: Mapping<u64, bool>,
 }
 
 #[odra::odra_type]
@@ -51,8 +57,12 @@ impl LockVault {
     pub fn init(&mut self, relayer_registry: Address) {
         self.relayer_registry.set(relayer_registry);
         self.next_swap_id.set(0);
+
+        let vault_purse = system::create_purse();
+        self.vault_purse.set(vault_purse);
     }
 
+    #[odra(payable)]
     pub fn deposit(&mut self, to_chain: String, token: Address, recipient: String, amount: U256) -> u64 {
         if amount == 0.into() {
             panic!("InvalidAmount");
@@ -67,6 +77,25 @@ impl LockVault {
         let swap_id = self.next_swap_id.get_or_default();
         let depositor = self.env().caller();
 
+        let attached = self.env().attached_value();
+        let amount_u64 = amount.as_u64();
+        if U256::from(amount_u64) != amount {
+            runtime::revert(ApiError::InvalidArgument);
+        }
+        let amount_u512 = U512::from(amount_u64);
+        if attached != amount_u512 {
+            runtime::revert(ApiError::InvalidArgument);
+        }
+
+        // Then move them into the vault purse controlled by this contract.
+        let contract_purse = get_main_purse();
+        let vault_purse = match self.vault_purse.get() {
+            Some(purse) => purse,
+            None => runtime::revert(ApiError::InvalidPurse),
+        };
+        system::transfer_from_purse_to_purse(contract_purse, vault_purse, attached, None)
+            .unwrap_or_else(|_| runtime::revert(ApiError::InvalidPurse));
+
         let deposit = Deposit {
             depositor,
             amount,
@@ -76,6 +105,7 @@ impl LockVault {
         };
         self.deposits.set(&swap_id, deposit);
         self.next_swap_id.set(swap_id + 1);
+        self.released.set(&swap_id, false);
 
         self.env().emit_event(DepositInitiated {
             swap_id,
@@ -91,7 +121,6 @@ impl LockVault {
 
     pub fn release(&mut self, swap_id: u64, recipient: Address, amount: U256) {
         let registry_addr = self.relayer_registry.get().unwrap();
-
         if self.env().caller() != registry_addr {
             panic!("NotRelayer");
         }
@@ -99,6 +128,31 @@ impl LockVault {
         if amount == 0.into() {
             panic!("InvalidAmount");
         }
+
+        if self.released.get(&swap_id).unwrap_or(false) {
+            runtime::revert(ApiError::InvalidArgument);
+        }
+
+        let amount_u64 = amount.as_u64();
+        if U256::from(amount_u64) != amount {
+            runtime::revert(ApiError::InvalidArgument);
+        }
+        let amount_u512 = U512::from(amount_u64);
+
+        let vault_purse = match self.vault_purse.get() {
+            Some(purse) => purse,
+            None => runtime::revert(ApiError::InvalidPurse),
+        };
+
+        let recipient_account: AccountHash = match recipient.as_account_hash() {
+            Some(a) => *a,
+            None => runtime::revert(ApiError::InvalidArgument),
+        };
+
+        system::transfer_from_purse_to_account(vault_purse, recipient_account, amount_u512, None)
+            .unwrap_or_else(|_| runtime::revert(ApiError::InvalidPurse));
+
+        self.released.set(&swap_id, true);
 
         self.env().emit_event(ReleaseExecuted {
             swap_id,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -12,20 +11,19 @@ contract EthLockVault is Ownable {
 
     struct Deposit {
         address depositor;
-        address token;
         uint256 amount;
         string toChain;
         string recipient;
         bool active;
     }
 
-    mapping(bytes32 => Deposit) public deposits;
-    mapping(bytes32 => bool) public processedSwaps;
+    mapping(uint256 => Deposit) public deposits;
+    mapping(uint256 => bool) public processedSwaps;
     mapping(address => bool) public relayers;
     uint256 public nextSwapId;
 
-    event DepositInitiated(bytes32 indexed swapId, address indexed depositor, string toChain, address token, uint256 amount, string recipient);
-    event ReleaseExecuted(bytes32 indexed swapId, address indexed recipient, uint256 amount, address token);
+    event DepositInitiated(uint256 indexed swapId, address indexed depositor, uint256 amount, string toChain, string recipient);
+    event ReleaseExecuted(uint256 indexed swapId, address indexed recipient, uint256 amount);
 
     constructor() Ownable(msg.sender) {}
 
@@ -33,37 +31,37 @@ contract EthLockVault is Ownable {
         relayers[relayer] = true;
     }
 
-    function deposit(string calldata toChain, address token, string calldata recipient, uint256 amount) external returns (bytes32) {
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
-        
-        bytes32 swapId = keccak256(abi.encodePacked(msg.sender, block.timestamp, nextSwapId));
+    function deposit(string calldata toChain, string calldata recipient) external payable returns (uint256) {
+        require(msg.value > 0, "Invalid amount");
+
+        uint256 swapId = nextSwapId;
         nextSwapId++;
 
         deposits[swapId] = Deposit({
             depositor: msg.sender,
-            token: token,
-            amount: amount,
+            amount: msg.value,
             toChain: toChain,
             recipient: recipient,
             active: true
         });
 
-        emit DepositInitiated(swapId, msg.sender, toChain, token, amount, recipient);
+        emit DepositInitiated(swapId, msg.sender, msg.value, toChain, recipient);
         return swapId;
     }
 
-    function release(bytes32 swapId, address recipient, uint256 amount, address token, bytes calldata signature) external {
+    function release(uint256 swapId, address recipient, uint256 amount, bytes calldata signature) external {
         require(!processedSwaps[swapId], "Swap already processed");
         
-        bytes32 messageHash = keccak256(abi.encodePacked(swapId, recipient, amount, token));
+        bytes32 messageHash = keccak256(abi.encodePacked(swapId, recipient, amount));
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         
         address signer = ethSignedMessageHash.recover(signature);
         require(relayers[signer], "Invalid relayer signature");
 
         processedSwaps[swapId] = true;
-        IERC20(token).transfer(recipient, amount);
+        (bool ok, ) = payable(recipient).call{ value: amount }("");
+        require(ok, "Transfer failed");
 
-        emit ReleaseExecuted(swapId, recipient, amount, token);
+        emit ReleaseExecuted(swapId, recipient, amount);
     }
 }

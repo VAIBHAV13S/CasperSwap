@@ -7,6 +7,7 @@ edition = "2021"
 odra = { version = "2.4.0", default-features = false }
 odra-modules = { version = "2.4.0", default-features = false }
 base64ct = "=1.6.0"
+casper-contract = { version = "5.1.1", default-features = false }
 
 [build-dependencies]
 odra-build = { version = "2.4.0", default-features = false }

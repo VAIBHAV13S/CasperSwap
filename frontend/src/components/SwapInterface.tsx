@@ -201,14 +201,20 @@ const SwapInterfaceInner = ({
 
         try {
             setIsProcessing(true);
-            const contractHash = import.meta.env.VITE_CASPER_CONTRACT_HASH || 'e13f53fca445eadac96bc577779cf3c16b426832db8ec079308b4c313d1083aa';
+            const contractHashRaw = import.meta.env.VITE_CASPER_CONTRACT_HASH || '';
+            const contractHash = contractHashRaw.startsWith('hash-')
+                ? contractHashRaw.slice('hash-'.length)
+                : contractHashRaw.startsWith('contract-')
+                    ? contractHashRaw.slice('contract-'.length)
+                    : contractHashRaw;
             const amountInMotes = (parseFloat(amount) * 1e9).toString();
             const zeroAddress = new (CasperSDK as any).CLAccountHash(new Uint8Array(32));
             const runtimeArgs = (CasperSDK as any).RuntimeArgs.fromMap({
                 to_chain: (CasperSDK as any).CLValueBuilder.string('ethereum'),
                 token: (CasperSDK as any).CLValueBuilder.key(zeroAddress),
                 recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
-                amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotes)
+                amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotes),
+                attached_value: (CasperSDK as any).CLValueBuilder.u512(amountInMotes)
             });
             const contractHashBytes = Uint8Array.from(Buffer.from(contractHash, 'hex'));
             const deploy = (CasperSDK as any).DeployUtil.makeDeploy(

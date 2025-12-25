@@ -5,7 +5,7 @@ export const config = {
     casper: {
         rpcUrl: process.env.CASPER_RPC_URL || 'https://node.testnet.casper.network',
         eventStreamUrl: process.env.CASPER_EVENT_STREAM_URL || 'http://localhost:18101/events/main',
-        contractHash: process.env.LOCK_VAULT_CONTRACT_HASH || process.env.CASPER_CONTRACT_HASH || '76f1c326539d21277212e15397f1a95d10e41d9b0e2259309b2221f0930c6e8f',
+        contractHash: process.env.LOCK_VAULT_CONTRACT_HASH || process.env.CASPER_CONTRACT_HASH || 'b19c3cc9547c21e669110e09ae59dc3ae3041254258b5f53d24afade0a4b539d',
         networkName: process.env.CASPER_NETWORK_NAME || 'casper-test',
         privateKey: process.env.CASPER_PRIVATE_KEY || '',
         eventsPollMs: parseInt(process.env.CASPER_EVENTS_POLL_MS || '30000'),

@@ -1,0 +1,38 @@
+.exit
+await vault.relayers(deployer.address)
+await vault.registerRelayer(deployer.address)
+await vault.riserRlaer(deployer.dress)
+await vault.iserelaer(deployer.address)
+)
+  deployer
+  ["function registerRelayer(address) external", "function relayers(address) view returns (bool)"],
+  "0x110D266C4E15e0892A19dD797a0C06de8541b538",
+vault = new ethers.Contract(
+ethers = hre.ethers
+  deployer
+  ["function registerRelayer(address) external", "function relayers(address) view returns (bool)"],
+  "0x110D266C4E15e0892A19dD797a0C06de8541b538",
+au = new ethers.Cont(
+ethers = hre.ethv
+vault = new ethers.Cntra("0x110D266C4E15e0892A19dD797a0C06de8541b538", ["function registerRelayer(address) external", "function relayers(address) view returns (bool)"], deployer)
+eers = hre.ethers
+hre = require("hardhat")
+vault = await ethers.geontractA("EthLockVault", "0x110D266C4E15e0892A19dD797a0C06de8541b538")
+vault = await ethers.getContAt"EthLockVault", "0x110D266C4E15e0892A19dD797a0C06de8541b538")
+const EthLockVault = await hre.thsgetonracFaory"EthLockVault");
+hre = require("hardhat")
+const EthLockVault = await hre.thsgetonracFaory"EthLockVault");
+hre = require("hardhat")
+const EthLockVault = await ethers.getContrtFactor("EthLockVault");
+vault = await ethers.getontractt("EthLockVault", "0x110D266C4E15e0892A19dD797a0C06de8541b538")
+vault = await ethers.getCtraA("EthLockVault", "0x110D266C4E15e0892A19dD797a0C06de8541b538")
+await vault.registeay(deployer.address)
+vault = await ethers.getAtEtLokVlt", "0x110D266C4E15e0892A19dD797a0C06de8541b538")
+deployer.address
+deployer = (await ethers.getSigners())[0]
+.exit
+const [deployer]=await ethers.getSigners();
+loyer.addr
+const [deployer] = await ethers.gigrs();
+deployer.address
+const [deployer] = await ethers.geers();
