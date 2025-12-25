@@ -21,6 +21,15 @@ export class CasperContractWatcher {
         this.pollMs = Number.isFinite(config.casper.eventsPollMs) ? config.casper.eventsPollMs : 30000;
     }
 
+    private toStateKeyHash(contractHashRaw: string): string {
+        const withoutPrefix = contractHashRaw.startsWith('hash-')
+            ? contractHashRaw.slice('hash-'.length)
+            : contractHashRaw.startsWith('contract-')
+                ? contractHashRaw.slice('contract-'.length)
+                : contractHashRaw;
+        return `hash-${withoutPrefix}`;
+    }
+
     public async start() {
         console.log('🔍 Starting Casper contract watcher...');
         console.log('   Contract Hash:', config.casper.contractHash);
@@ -68,9 +77,7 @@ export class CasperContractWatcher {
 
                 // Odra/CES stores events under a named dictionary "__events" within the contract.
                 // We poll sequentially by index until we hit a missing key.
-                const contractHash = config.casper.contractHash.startsWith('hash-')
-                    ? config.casper.contractHash
-                    : `hash-${config.casper.contractHash}`;
+                const contractHash = this.toStateKeyHash(config.casper.contractHash);
 
                 if (!this.eventsSeedUref) {
                     this.eventsSeedUref = await this.resolveEventsSeedUref(stateRootHash, contractHash);
