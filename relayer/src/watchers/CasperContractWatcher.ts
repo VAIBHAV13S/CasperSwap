@@ -84,6 +84,16 @@ export class CasperContractWatcher {
                 }
 
                 const eventsLength = await this.getEventsLength(stateRootHash);
+                if (eventsLength === 0 && nextIndex !== 0) {
+                    console.log(`   ⚠️  __events_length is 0 but cursor is at ${nextIndex}; rewinding cursor to 0`);
+                    await this.setLastProcessedIndex(client, -1);
+                    nextIndex = 0;
+                }
+                if (eventsLength !== null && eventsLength > 0 && nextIndex > eventsLength) {
+                    console.log(`   ⚠️  Cursor (${nextIndex}) is beyond __events_length (${eventsLength}); rewinding cursor to 0`);
+                    await this.setLastProcessedIndex(client, -1);
+                    nextIndex = 0;
+                }
                 if (eventsLength !== null && nextIndex >= eventsLength) {
                     console.log(`   No new Casper events (next=${nextIndex}, length=${eventsLength})`);
                     return;
