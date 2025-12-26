@@ -76,16 +76,12 @@ impl LockVault {
 
         let swap_id = self.next_swap_id.get_or_default();
         let depositor = self.env().caller();
-
-        let attached = self.env().attached_value();
         let amount_u64 = amount.as_u64();
         if U256::from(amount_u64) != amount {
             runtime::revert(ApiError::InvalidArgument);
         }
+
         let amount_u512 = U512::from(amount_u64);
-        if attached != amount_u512 {
-            runtime::revert(ApiError::InvalidArgument);
-        }
 
         // Then move them into the vault purse controlled by this contract.
         let contract_purse = get_main_purse();
@@ -93,7 +89,7 @@ impl LockVault {
             Some(purse) => purse,
             None => runtime::revert(ApiError::InvalidPurse),
         };
-        system::transfer_from_purse_to_purse(contract_purse, vault_purse, attached, None)
+        system::transfer_from_purse_to_purse(contract_purse, vault_purse, amount_u512, None)
             .unwrap_or_else(|_| runtime::revert(ApiError::InvalidPurse));
 
         let deposit = Deposit {

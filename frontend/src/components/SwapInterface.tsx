@@ -201,20 +201,26 @@ const SwapInterfaceInner = ({
 
         try {
             setIsProcessing(true);
-            const contractHashRaw = import.meta.env.VITE_CASPER_CONTRACT_HASH || '';
+            const contractHashRaw = CONTRACTS.casper.contractHash || '';
             const contractHash = contractHashRaw.startsWith('hash-')
                 ? contractHashRaw.slice('hash-'.length)
                 : contractHashRaw.startsWith('contract-')
                     ? contractHashRaw.slice('contract-'.length)
                     : contractHashRaw;
-            const amountInMotes = (parseFloat(amount) * 1e9).toString();
+
+            if (!/^[0-9a-fA-F]{64}$/.test(contractHash)) {
+                throw new Error(
+                    `Invalid Casper contract hash. Set VITE_CASPER_CONTRACT_HASH to the *contract hash* (e.g. contract-b19c...), not the package hash.`
+                );
+            }
+
+            const amountInMotesBigInt = BigInt(Math.floor(parseFloat(amount) * 1e9));
             const zeroAddress = new (CasperSDK as any).CLAccountHash(new Uint8Array(32));
             const runtimeArgs = (CasperSDK as any).RuntimeArgs.fromMap({
                 to_chain: (CasperSDK as any).CLValueBuilder.string('ethereum'),
                 token: (CasperSDK as any).CLValueBuilder.key(zeroAddress),
                 recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
-                amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotes),
-                attached_value: (CasperSDK as any).CLValueBuilder.u512(amountInMotes)
+                amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotesBigInt.toString())
             });
             const contractHashBytes = Uint8Array.from(Buffer.from(contractHash, 'hex'));
             const deploy = (CasperSDK as any).DeployUtil.makeDeploy(
