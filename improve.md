@@ -265,26 +265,7 @@ Demo script:
 
 ---
 
-## 🟢 PHASE 9: Optional advanced features (if time remains)
 
-Choose **ONE**:
-
-### Option A: CEP-18 token support
-
-* Swap stablecoins on Casper
-* Massive ecosystem relevance
-
-### Option B: DAO-governed relayer registry
-
-* Governance controls relayers
-* Appeals to decentralization judges
-
-### Option C: Fee model + treasury
-
-* Protocol sustainability
-* Shows real product thinking
-
----
 
 # 🏆 Final priority order (IMPORTANT)
 
@@ -301,24 +282,3 @@ If time is limited, do **in this exact order**:
 
 ---
 
-## 🔥 Final truth (honest assessment)
-
-If you implement **Phases 1–4 well**, your project is:
-
-* Technically sound
-* Security-aware
-* Judge-friendly
-* **Best-prize competitive**
-
-If you reach **Phases 5–6**, you’re in **top 5% of hackathon submissions**.
-
----
-
-If you want next, I can:
-
-* Convert this into a **week-by-week execution plan**
-* Write **exact contract upgrades**
-* Prepare a **judge-ready pitch explanation**
-* Create a **security section for submission**
-
-Tell me what you want to build next.

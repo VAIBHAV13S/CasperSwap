@@ -220,7 +220,8 @@ const SwapInterfaceInner = ({
                 to_chain: (CasperSDK as any).CLValueBuilder.string('ethereum'),
                 token: (CasperSDK as any).CLValueBuilder.key(zeroAddress),
                 recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
-                amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotesBigInt.toString())
+                amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotesBigInt.toString()),
+                attached_value: (CasperSDK as any).CLValueBuilder.u512(amountInMotesBigInt.toString())
             });
             const contractHashBytes = Uint8Array.from(Buffer.from(contractHash, 'hex'));
             const deploy = (CasperSDK as any).DeployUtil.makeDeploy(
