@@ -27,11 +27,25 @@ export const createDepositDeploy = (
 ) => {
     contractClient.setContractHash(contractHash);
 
+    const tokenKey = (() => {
+        const raw = tokenHash.startsWith('account-hash-')
+            ? tokenHash.slice('account-hash-'.length)
+            : tokenHash;
+        if (!/^[0-9a-fA-F]{64}$/.test(raw)) {
+            throw new Error(
+                `Invalid token/account-hash for deposit 'token' arg: ${tokenHash}. Expected 32-byte hex or account-hash-...`
+            );
+        }
+        const bytes = Uint8Array.from(Buffer.from(raw, 'hex'));
+        const acc = new (CasperSDK as any).CLAccountHash(bytes);
+        return new (CasperSDK as any).CLKey(acc);
+    })();
+
     const args = (CasperSDK as any).RuntimeArgs.fromMap({
         amount: (CasperSDK as any).CLValueBuilder.u256(amount),
         to_chain: (CasperSDK as any).CLValueBuilder.string(toChain),
         recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
-        token: (CasperSDK as any).CLValueBuilder.string(tokenHash),
+        token: tokenKey,
     });
 
     const deploy = contractClient.callEntrypoint(
