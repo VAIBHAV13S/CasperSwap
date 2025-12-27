@@ -161,7 +161,23 @@ const SwapInterfaceInner = ({
             alert('Swap initiated! Your CSPR will arrive in 30-60 seconds.');
         } catch (error: any) {
             console.error('Swap failed:', error);
-            alert(`Swap failed: ${error.message || 'Unknown error'}`);
+            const extra = (() => {
+                try {
+                    return JSON.stringify(
+                        {
+                            message: error?.message,
+                            code: error?.code,
+                            data: error?.data,
+                            error: error?.error,
+                        },
+                        null,
+                        2
+                    );
+                } catch {
+                    return '';
+                }
+            })();
+            alert(`Swap failed: ${error?.message || 'Unknown error'}\n\nDetails: ${extra}`);
         } finally {
             setIsProcessing(false);
         }
@@ -286,9 +302,30 @@ const SwapInterfaceInner = ({
                 throw new Error('No wallet provider found for signing');
             }
 
+            console.log('Signed deploy JSON (debug):', signedDeployJSON);
+
             const signedDeploy = (CasperSDK as any).DeployUtil.deployFromJson(signedDeployJSON).unwrap();
             const casperService = new (CasperSDK as any).CasperServiceByJsonRPC(window.location.origin + '/api/casper-node/rpc');
-            const result = await casperService.deploy(signedDeploy);
+            let result: any;
+            try {
+                result = await casperService.deploy(signedDeploy);
+            } catch (e: any) {
+                // casper-js-sdk often wraps JSON-RPC errors; try to surface the full structure.
+                const debug: any = {
+                    message: e?.message,
+                    name: e?.name,
+                    code: e?.code,
+                    data: e?.data,
+                    error: e?.error,
+                };
+                try {
+                    debug.full = JSON.parse(JSON.stringify(e, Object.getOwnPropertyNames(e)));
+                } catch {
+                    debug.full = String(e);
+                }
+                console.error('Casper RPC deploy error (debug):', debug);
+                throw e;
+            }
 
             if (result.deploy_hash) {
                 alert(`Swap initiated! Deploy hash: ${result.deploy_hash}\n\nYour ETH will arrive in 30-60 seconds.`);
@@ -298,7 +335,23 @@ const SwapInterfaceInner = ({
 
         } catch (error: any) {
             console.error('Swap failed:', error);
-            alert(`Swap failed: ${error.message || 'Unknown error'}`);
+            const extra = (() => {
+                try {
+                    return JSON.stringify(
+                        {
+                            message: error?.message,
+                            code: error?.code,
+                            data: error?.data,
+                            error: error?.error,
+                        },
+                        null,
+                        2
+                    );
+                } catch {
+                    return '';
+                }
+            })();
+            alert(`Swap failed: ${error?.message || 'Unknown error'}\n\nDetails: ${extra}`);
         } finally {
             setIsProcessing(false);
         }
