@@ -241,27 +241,44 @@ const SwapInterfaceInner = ({
             let signedDeployJSON;
 
             if (click && (await click.isConnected())) {
-                signedDeployJSON = await click.sign(JSON.stringify(deployJSON), connectedKey);
+                const signed = await click.sign(JSON.stringify(deployJSON), connectedKey);
+                signedDeployJSON = typeof signed === 'string' ? JSON.parse(signed) : signed;
             } else if ((window as any).CasperWalletProvider) {
                 const provider = (window as any).CasperWalletProvider();
                 if (await provider.isConnected()) {
                     const res = await provider.sign(JSON.stringify(deployJSON), connectedKey);
-                    if (res.cancelled) throw new Error('Signing cancelled');
-                    let signatureBytes: Uint8Array;
-                    if (typeof res.signature === 'string') {
-                        signatureBytes = Uint8Array.from(Buffer.from(res.signature, 'hex'));
-                    } else if (res.signature instanceof Uint8Array) {
-                        signatureBytes = res.signature;
-                    } else {
-                        signatureBytes = Uint8Array.from(Buffer.from(res.signature as any));
+                    if (res?.cancelled) throw new Error('Signing cancelled');
+
+                    // Casper Wallets typically return a fully signed deploy JSON (with approvals).
+                    // Use it as-is to avoid creating malformed deploys.
+                    if (res && typeof res === 'object') {
+                        if ((res as any).deploy) {
+                            signedDeployJSON = (res as any).deploy;
+                        } else if ((res as any).approvals || (res as any).hash || (res as any).header) {
+                            signedDeployJSON = res;
+                        } else if ((res as any).signature) {
+                            // Fallback: older providers return just the signature.
+                            let signatureBytes: Uint8Array;
+                            if (typeof (res as any).signature === 'string') {
+                                signatureBytes = Uint8Array.from(Buffer.from((res as any).signature, 'hex'));
+                            } else if ((res as any).signature instanceof Uint8Array) {
+                                signatureBytes = (res as any).signature;
+                            } else {
+                                signatureBytes = Uint8Array.from(Buffer.from((res as any).signature));
+                            }
+                            if (signatureBytes.length === 65) signatureBytes = signatureBytes.slice(1);
+                            const signedDeploy = (CasperSDK as any).DeployUtil.setSignature(
+                                deploy,
+                                signatureBytes,
+                                (CasperSDK as any).CLPublicKey.fromHex(connectedKey)
+                            );
+                            signedDeployJSON = (CasperSDK as any).DeployUtil.deployToJson(signedDeploy);
+                        }
                     }
-                    if (signatureBytes.length === 65) signatureBytes = signatureBytes.slice(1);
-                    const signedDeploy = (CasperSDK as any).DeployUtil.setSignature(
-                        deploy,
-                        signatureBytes,
-                        (CasperSDK as any).CLPublicKey.fromHex(connectedKey)
-                    );
-                    signedDeployJSON = (CasperSDK as any).DeployUtil.deployToJson(signedDeploy);
+
+                    if (!signedDeployJSON) {
+                        signedDeployJSON = typeof res === 'string' ? JSON.parse(res) : res;
+                    }
                 } else {
                     throw new Error('Wallet not connected for signing');
                 }
