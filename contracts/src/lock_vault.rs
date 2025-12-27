@@ -94,11 +94,7 @@ impl LockVault {
             runtime::revert(ApiError::InvalidArgument);
         }
 
-        let attached = self.env().attached_value();
         let amount_u512 = U512::from(amount_u64);
-        if attached != amount_u512 {
-            runtime::revert(ApiError::InvalidArgument);
-        }
 
         // Move the attached funds into the vault purse (real escrow).
         let vault_purse = match self.vault_purse.get() {
