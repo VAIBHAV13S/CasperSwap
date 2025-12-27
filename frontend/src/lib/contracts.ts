@@ -1,7 +1,7 @@
 // Contract Configuration
 export const CONTRACTS = {
     casper: {
-        contractHash: import.meta.env.VITE_CASPER_CONTRACT_HASH || import.meta.env.VITE_LOCK_VAULT_CONTRACT_HASH || '',
+        contractHash: import.meta.env.VITE_CASPER_CONTRACT_HASH || '',
         rpcUrl: import.meta.env.VITE_CASPER_RPC_URL || 'https://node.testnet.casper.network',
         networkName: import.meta.env.VITE_CASPER_NETWORK_NAME || 'casper-test',
     },

@@ -217,16 +217,15 @@ const SwapInterfaceInner = ({
 
         try {
             setIsProcessing(true);
+            console.log('Casper contract hash (raw, from env):', CONTRACTS.casper.contractHash);
             const contractHashRaw = CONTRACTS.casper.contractHash || '';
-            if (contractHashRaw.startsWith('hash-')) {
+            if (!contractHashRaw.startsWith('contract-')) {
                 throw new Error(
-                    `VITE_CASPER_CONTRACT_HASH is set to a package hash (${contractHashRaw}). ` +
-                    `You must use the deployed *contract hash* (contract-...), e.g. contract-0ddc...a1c0.`
+                    `VITE_CASPER_CONTRACT_HASH must be set to the deployed *contract hash* and include the 'contract-' prefix. ` +
+                    `Example: contract-0ddc...a1c0. Current value: ${contractHashRaw || '(empty)'}`
                 );
             }
-            const contractHash = contractHashRaw.startsWith('contract-')
-                ? contractHashRaw.slice('contract-'.length)
-                : contractHashRaw;
+            const contractHash = contractHashRaw.slice('contract-'.length);
 
             if (!/^[0-9a-fA-F]{64}$/.test(contractHash)) {
                 throw new Error(
