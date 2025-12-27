@@ -4,14 +4,16 @@
 
 ### Casper Testnet
 - **RelayerRegistry package hash:** `hash-f3c06f7c6b4115ae6f6bb184f3b515977f5df709c025805766254aee8e5d1425`
-- **LockVault package hash:** `hash-f15600a2d4e9954d4c193b9c94daf3ad9edf7a16a366d9a6fa31ef75f40c9a7d`
-- **LockVault contract hash:** `contract-b19c3cc9547c21e669110e09ae59dc3ae3041254258b5f53d24afade0a4b539d`
+- **LockVault package hash:** `hash-bf65af020bd90f2dd1e5b1ebc82dd98cdddc4472ea4555b6deb62f0df605530c`
+- **LockVault contract hash:** `contract-0ddc0291717a1913e67fe4e1d5b020396051e0ed37aba939860c1b781c02a1c0`
+- **BridgeController package hash:** `hash-ced81afd58566c1840cfe6d6774e2643c90f4515ae4af9ed9c61914b7611494d`
+- **BridgeController contract hash:** `contract-52b48d05520586e765fa95636d99eb73ba73c9b66b05e7a19c7e0be711802fef`
 - **SwapRouter package hash:** `hash-9994ed499053221afc3e7727c7d01a20fb7b2c1162c80b91cbd32d24af3746a5`
 
 ### Ethereum Sepolia
-- **Contract Address:** `0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754`
+- **Contract Address:** `0x110D266C4E15e0892A19dD797a0C06de8541b538`
 - **Deployer:** `0xD2e59333e77d7C6F7265A127444d825C6B74550a`
-- **Explorer:** https://sepolia.etherscan.io/address/0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754
+- **Explorer:** https://sepolia.etherscan.io/address/0x110D266C4E15e0892A19dD797a0C06de8541b538
 
 ---
 
@@ -40,7 +42,7 @@ Access at: http://localhost:5173
 ✅ Contract interaction with deployed addresses
 ✅ Casper → Ethereum swaps (LockVault.deposit is payable and escrows CSPR in vault purse)
 ✅ Ethereum → Casper payouts via escrow (relayer calls LockVault.release; no direct transfer)
-
+✅ Casper governance/control plane (BridgeController) for relayer allowlist + admin-gated settings
 ---
 
 ## 🔌 Casper RPC access (Vercel)
@@ -68,8 +70,8 @@ CasperSwap/
 
 ### Frontend (`.env`)
 ```ini
-VITE_CASPER_CONTRACT_HASH=contract-b19c3cc9547c21e669110e09ae59dc3ae3041254258b5f53d24afade0a4b539d
-VITE_ETHEREUM_CONTRACT_ADDRESS=0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754
+VITE_CASPER_CONTRACT_HASH=contract-0ddc0291717a1913e67fe4e1d5b020396051e0ed37aba939860c1b781c02a1c0
+VITE_ETHEREUM_CONTRACT_ADDRESS=0x110D266C4E15e0892A19dD797a0C06de8541b538
 VITE_ETHEREUM_CHAIN_ID=11155111
 VITE_CSPRCLICK_ENABLED=false
 VITE_RELAYER_URL=https://casperswap.onrender.com
@@ -82,7 +84,7 @@ VITE_RELAYER_URL=https://casperswap.onrender.com
 
 Relayer env should include the Casper LockVault contract hash:
 ```ini
-LOCK_VAULT_CONTRACT_HASH=contract-b19c3cc9547c21e669110e09ae59dc3ae3041254258b5f53d24afade0a4b539d
+LOCK_VAULT_CONTRACT_HASH=contract-0ddc0291717a1913e67fe4e1d5b020396051e0ed37aba939860c1b781c02a1c0
 ```
 
 ---
@@ -127,7 +129,7 @@ Payout is executed on Casper by the relayer calling `LockVault.release()`.
 5. Relayer pays out ETH on Sepolia
 
 ### Verify on Explorer
-- **Ethereum:** https://sepolia.etherscan.io/address/0x26D1Fc099043e4e086a3e844862cb2EFa4Db9754
+- **Ethereum:** https://sepolia.etherscan.io/address/0x110D266C4E15e0892A19dD797a0C06de8541b538
 - **Casper:** https://testnet.cspr.live/
 
 ---

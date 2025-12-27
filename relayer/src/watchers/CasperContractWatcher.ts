@@ -176,7 +176,25 @@ export class CasperContractWatcher {
                             console.log(`   ⚠️  Failed inserting swap row: ${e?.message || e}`);
                         }
                     } else {
-                        console.log('   ⚠️  Could not decode Casper event into DepositInitiated (stored raw event only)');
+                        const released = this.tryExtractReleaseExecuted(payload);
+                        if (released) {
+                            await client.query(
+                                "UPDATE swaps SET status = 'COMPLETED', release_tx_hash = $1, updated_at = NOW() WHERE swap_id = $2 AND status <> 'COMPLETED'",
+                                [txHash, released.swapId]
+                            );
+                            console.log(`   ✅ Decoded ReleaseExecuted -> swaps.swap_id=${released.swapId} marked COMPLETED`);
+                        } else {
+                            const refunded = this.tryExtractRefundExecuted(payload);
+                            if (refunded) {
+                                await client.query(
+                                    "UPDATE swaps SET status = 'REFUNDED', release_tx_hash = $1, updated_at = NOW() WHERE swap_id = $2 AND status <> 'REFUNDED'",
+                                    [txHash, refunded.swapId]
+                                );
+                                console.log(`   ✅ Decoded RefundExecuted -> swaps.swap_id=${refunded.swapId} marked REFUNDED`);
+                            } else {
+                                console.log('   ⚠️  Could not decode Casper event into known LockVault event (stored raw event only)');
+                            }
+                        }
                     }
 
                     await this.setLastProcessedIndex(client, nextIndex);
@@ -197,6 +215,44 @@ export class CasperContractWatcher {
             console.error('   Error checking Casper deposits:', err.message);
         } finally {
             this.isChecking = false;
+        }
+    }
+
+    private tryExtractReleaseExecuted(payload: any): null | {
+        swapId: string;
+        recipient: string;
+        amount: string;
+    } {
+        try {
+            const decoded = this.decodeCesEventBytesReleaseLike(payload);
+            if (!decoded) return null;
+            if (!decoded.name.startsWith('event_ReleaseExecuted')) return null;
+            return {
+                swapId: decoded.swapId.toString(),
+                recipient: decoded.recipientHex,
+                amount: decoded.amountDecimal,
+            };
+        } catch {
+            return null;
+        }
+    }
+
+    private tryExtractRefundExecuted(payload: any): null | {
+        swapId: string;
+        recipient: string;
+        amount: string;
+    } {
+        try {
+            const decoded = this.decodeCesEventBytesReleaseLike(payload);
+            if (!decoded) return null;
+            if (!decoded.name.startsWith('event_RefundExecuted')) return null;
+            return {
+                swapId: decoded.swapId.toString(),
+                recipient: decoded.recipientHex,
+                amount: decoded.amountDecimal,
+            };
+        } catch {
+            return null;
         }
     }
 
@@ -439,6 +495,83 @@ export class CasperContractWatcher {
             toChain,
             recipient,
             tokenHex: `account-hash-${bytesToHex(token)}`,
+        };
+    }
+
+    private decodeCesEventBytesReleaseLike(payload: any): null | {
+        name: string;
+        swapId: bigint;
+        recipientHex: string;
+        amountDecimal: string;
+    } {
+        const bytes = this.extractBytesFromPayload(payload);
+        if (!bytes || bytes.length < 10) return null;
+
+        let off = 0;
+
+        const readU64LE = (): bigint => {
+            if (off + 8 > bytes.length) throw new Error('oob');
+            let v = 0n;
+            for (let i = 0; i < 8; i++) {
+                v |= BigInt(bytes[off + i]) << (8n * BigInt(i));
+            }
+            off += 8;
+            return v;
+        };
+        const readBytes = (len: number) => {
+            if (off + len > bytes.length) throw new Error('oob');
+            const out = bytes.slice(off, off + len);
+            off += len;
+            return out;
+        };
+        const bytesToAscii = (b: number[]) => String.fromCharCode(...b);
+        const bytesToHex = (b: number[]) => b.map((x) => x.toString(16).padStart(2, '0')).join('');
+        const bytesLeToBigInt = (b: number[]) => {
+            let v = 0n;
+            for (let i = 0; i < b.length; i++) {
+                v |= BigInt(b[i]) << (8n * BigInt(i));
+            }
+            return v;
+        };
+
+        const marker = [101, 118, 101, 110, 116, 95]; // "event_"
+        const findMarker = (): number | null => {
+            for (let i = 0; i <= Math.min(bytes.length - marker.length, 256); i++) {
+                let ok = true;
+                for (let j = 0; j < marker.length; j++) {
+                    if (bytes[i + j] !== marker[j]) {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (ok) return i;
+            }
+            return null;
+        };
+
+        const markerPos = findMarker();
+        if (markerPos === null) return null;
+
+        let nameEnd = markerPos;
+        while (nameEnd < bytes.length && bytes[nameEnd] !== 0) {
+            nameEnd += 1;
+        }
+        if (nameEnd >= bytes.length) return null;
+
+        const name = bytesToAscii(bytes.slice(markerPos, nameEnd));
+        off = nameEnd + 1;
+
+        const swapId = readU64LE();
+        const recipient = readBytes(32);
+
+        const amountBytes = bytes.slice(off);
+        if (amountBytes.length === 0) return null;
+
+        return {
+            name,
+            swapId,
+            recipientHex: `account-hash-${bytesToHex(recipient)}`,
+            amountDecimal: bytesLeToBigInt(amountBytes).toString(10),
         };
     }
 

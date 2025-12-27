@@ -63,6 +63,9 @@ async function main() {
     console.log('  • Casper → Ethereum swaps');
     console.log('  • Automatic exchange rate conversion');
     console.log('');
+    console.log('Operational notes:');
+    console.log('  • Casper releases are role-gated by LockVault. Ensure the relayer public key is allowlisted by calling LockVault.add_relayer(relayerAddress) from the controller/admin address used at LockVault.init(controller).');
+    console.log('');
     console.log('Press Ctrl+C to stop');
     console.log('');
 

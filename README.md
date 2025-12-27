@@ -47,6 +47,19 @@ casper-client put-deploy \
   --session-arg "odra_cfg_is_upgrade:bool='false'"
 ```
 
+Deploy `BridgeController`, then deploy `LockVault` with the controller/admin address passed to `LockVault.init(controller)`.
+
+After deployment, the controller/admin must allowlist the relayer address on `LockVault` via `LockVault.add_relayer(relayer)`.
+
+Testnet hashes (current):
+
+- **LockVault contract hash:** `contract-0ddc0291717a1913e67fe4e1d5b020396051e0ed37aba939860c1b781c02a1c0`
+- **LockVault package hash:** `hash-bf65af020bd90f2dd1e5b1ebc82dd98cdddc4472ea4555b6deb62f0df605530c`
+- **BridgeController contract hash:** `contract-52b48d05520586e765fa95636d99eb73ba73c9b66b05e7a19c7e0be711802fef`
+- **BridgeController package hash:** `hash-ced81afd58566c1840cfe6d6774e2643c90f4515ae4af9ed9c61914b7611494d`
+
+If you want upgrades later, deploy `LockVault` as **upgradeable** (set `odra_cfg_is_upgradable:bool='true'`) so state can be preserved across upgrades.
+
 ### 2. Verify Deployment
 
 Check your deployment on the Casper Testnet Explorer:
@@ -84,7 +97,7 @@ npx hardhat run scripts/deploy.js --network sepolia
 
 ## Architecture
 
-- **Casper Contracts**: Odra contracts deployed on Casper testnet (not fully escrowed yet; see "Limitations")
+- **Casper Contracts**: Odra contracts deployed on Casper testnet (LockVault holds escrow; controller/admin manages configuration)
 - **Ethereum Contracts**: Solidity contract on Sepolia used to accept deposits (locks ETH in the contract)
 - **Relayer**: Off-chain service that watches both chains, stores events/swaps in Postgres (Neon), and executes payouts
 - **Frontend**: React UI that initiates deposits on either chain
@@ -97,7 +110,7 @@ This project currently behaves like a **relayed bridge**:
 - The relayer observes that deposit event and records a swap in the database.
 - The relayer pays the user on the **destination chain**.
 
-Important: at the moment, payouts are performed by the relayer directly and the Casper-side LockVault contract does not hold and release escrowed funds (details below).
+Important: the Casper-side `LockVault` is an escrow contract for CSPR deposits and supports relayer-gated release and user refunds after a timeout.
 
 ### Components and responsibilities
 
@@ -115,11 +128,9 @@ Important: at the moment, payouts are performed by the relayer directly and the 
 - **User action**: call `deposit(to_chain="ethereum", token, recipient, amount)`.
 - **Event emitted**: `DepositInitiated(swap_id, depositor, amount, to_chain, recipient, token)` using Casper Event Standard (CES) stored under `__events`.
 - **Current behavior**:
-  - `deposit` stores the deposit metadata in the contract’s `deposits` mapping.
-  - **It does not transfer tokens/CSPR into a contract purse.**
-  - `release` only checks authorization and emits `ReleaseExecuted`.
-
-Because of that, the relayer’s Casper payout is currently done via a **native transfer** (not via `LockVault.release`).
+  - `deposit` records deposit metadata and transfers attached CSPR into a vault purse (escrow).
+  - `release` is relayer-gated via `LockVault.is_relayer(caller)` and transfers escrowed funds to the recipient.
+  - `refund` allows the depositor to reclaim escrowed funds after a configurable timeout.
 
 #### 3) Relayer (Node/TS)
 
@@ -161,7 +172,7 @@ The relayer is the “brain” that makes this bidirectional flow work.
 1. User deposits ETH into `EthLockVault.deposit("casper", recipient)`.
 2. Relayer detects `DepositInitiated` on Ethereum and stores it as a `PENDING` swap.
 3. Relayer calculates payout amount in motes using the price oracle.
-4. Relayer pays the Casper recipient via a **native Casper transfer** (current implementation).
+4. Relayer pays the Casper recipient by calling `LockVault.release(swap_id, recipient, amount)`.
 5. Swap is marked `COMPLETED` in the database.
 
 ### Flow B: Casper → Ethereum
@@ -194,7 +205,7 @@ This means the system is currently **not trustless**: the relayer must be funded
 
 ## Known limitations (current behavior)
 
-- **Casper LockVault is not an escrow**: `release()` emits an event but does not transfer CSPR/tokens.
+- **Relayer is still trusted for correctness**: it decides when to release based on off-chain observation, and must be operated responsibly.
 - **Swaps are marked completed immediately after broadcast** (not after finality confirmation).
 - **Price oracle depends on CoinGecko** and can be rate-limited (429). The code keeps last known prices, but this is still an external dependency.
 - **Security model is relayer-based**: the relayer can pay (or not pay). This is fine for a demo/prototype but not a trust-minimized bridge.
@@ -203,9 +214,8 @@ This means the system is currently **not trustless**: the relayer must be funded
 
 ### 1) Make Casper side a real escrow
 
-- Update `LockVault.deposit` to actually accept funds (CSPR transfer / purse management) or support CEP-18 token transfers.
-- Update `LockVault.release` to transfer from contract-controlled purse to recipient.
-- Keep `RelayerRegistry` as a proper allowlist and have `release` check `RelayerRegistry.is_relayer(caller)` rather than `caller == registry`.
+- Extend escrow beyond CSPR to support CEP-18 token transfers.
+- If desired, make `LockVault` consume `BridgeController` relayer allowlist via cross-contract calls.
 
 ### 2) Add confirmation/finality checks
 

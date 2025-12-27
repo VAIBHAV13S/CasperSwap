@@ -2,6 +2,9 @@
 fqn = "casper_swap::LockVault"
 
 [[contracts]]
+fqn = "casper_swap::BridgeController"
+
+[[contracts]]
 fqn = "casper_swap::RelayerRegistry"
 
 [[contracts]]

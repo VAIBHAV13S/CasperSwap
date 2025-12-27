@@ -108,7 +108,11 @@ export class Executor {
             await this.updateSwapStatus(swapId, 'COMPLETED', deployHash);
             return deployHash;
         } catch (err: any) {
-            console.error('  ❌ LockVault.release failed:', err.message);
+            const msg = String(err?.message || err);
+            console.error('  ❌ LockVault.release failed:', msg);
+            if (msg.includes('NotRelayer')) {
+                console.error('  Hint: your relayer key is not allowlisted in Casper LockVault. Add it via LockVault.add_relayer(relayerAddress) from the controller/admin address.');
+            }
             await this.updateSwapStatus(swapId, 'FAILED', null);
             return null;
         }

@@ -80,7 +80,7 @@ Your ETH will arrive in 30-60 seconds.
    ↓
 2. Deploy sent to Casper network
    ↓
-3. Casper contract locks 100 CSPR
+3. LockVault escrows the deposited CSPR in a vault purse
    ↓
 4. Contract emits DepositInitiated event
    ↓
@@ -112,7 +112,7 @@ Your ETH will arrive in 30-60 seconds.
 
 ### "Deploy failed"
 - Check your CSPR balance (need amount + 3 CSPR for gas)
-- Verify `VITE_CASPER_CONTRACT_HASH` in `frontend/.env`
+- Verify `VITE_CASPER_CONTRACT_HASH` in `frontend/.env` (current: `contract-0ddc0291717a1913e67fe4e1d5b020396051e0ed37aba939860c1b781c02a1c0`)
 - Check Casper network status
 
 ### Swap not processing
