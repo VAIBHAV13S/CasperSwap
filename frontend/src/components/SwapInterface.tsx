@@ -215,10 +215,11 @@ const SwapInterfaceInner = ({
             }
 
             const amountInMotesBigInt = BigInt(Math.floor(parseFloat(amount) * 1e9));
-            const zeroAddress = new (CasperSDK as any).CLAccountHash(new Uint8Array(32));
+            const zeroAccountHash = new (CasperSDK as any).CLAccountHash(new Uint8Array(32));
+            const zeroKey = new (CasperSDK as any).CLKey(zeroAccountHash);
             const runtimeArgs = (CasperSDK as any).RuntimeArgs.fromMap({
                 to_chain: (CasperSDK as any).CLValueBuilder.string('ethereum'),
-                token: (CasperSDK as any).CLValueBuilder.key(zeroAddress),
+                token: (CasperSDK as any).CLValueBuilder.key(zeroKey),
                 recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
                 amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotesBigInt.toString()),
                 attached_value: (CasperSDK as any).CLValueBuilder.u512(amountInMotesBigInt.toString())
@@ -269,7 +270,7 @@ const SwapInterfaceInner = ({
             }
 
             const signedDeploy = (CasperSDK as any).DeployUtil.deployFromJson(signedDeployJSON).unwrap();
-            const casperService = new (CasperSDK as any).CasperServiceByJsonRPC(window.location.origin + '/api/casper-node');
+            const casperService = new (CasperSDK as any).CasperServiceByJsonRPC(window.location.origin + '/api/casper-node/rpc');
             const result = await casperService.deploy(signedDeploy);
 
             if (result.deploy_hash) {
