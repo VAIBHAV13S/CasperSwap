@@ -218,11 +218,15 @@ const SwapInterfaceInner = ({
         try {
             setIsProcessing(true);
             const contractHashRaw = CONTRACTS.casper.contractHash || '';
-            const contractHash = contractHashRaw.startsWith('hash-')
-                ? contractHashRaw.slice('hash-'.length)
-                : contractHashRaw.startsWith('contract-')
-                    ? contractHashRaw.slice('contract-'.length)
-                    : contractHashRaw;
+            if (contractHashRaw.startsWith('hash-')) {
+                throw new Error(
+                    `VITE_CASPER_CONTRACT_HASH is set to a package hash (${contractHashRaw}). ` +
+                    `You must use the deployed *contract hash* (contract-...), e.g. contract-0ddc...a1c0.`
+                );
+            }
+            const contractHash = contractHashRaw.startsWith('contract-')
+                ? contractHashRaw.slice('contract-'.length)
+                : contractHashRaw;
 
             if (!/^[0-9a-fA-F]{64}$/.test(contractHash)) {
                 throw new Error(
