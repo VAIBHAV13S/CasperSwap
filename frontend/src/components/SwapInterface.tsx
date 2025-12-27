@@ -215,11 +215,12 @@ const SwapInterfaceInner = ({
             }
 
             const amountInMotesBigInt = BigInt(Math.floor(parseFloat(amount) * 1e9));
-            const zeroAccountHash = new (CasperSDK as any).CLAccountHash(new Uint8Array(32));
-            const zeroKey = new (CasperSDK as any).CLKey(zeroAccountHash);
+            const zeroKey = (CasperSDK as any).CLValueBuilder.key(
+                (CasperSDK as any).CLValueBuilder.accountHash(new Uint8Array(32))
+            );
             const runtimeArgs = (CasperSDK as any).RuntimeArgs.fromMap({
                 to_chain: (CasperSDK as any).CLValueBuilder.string('ethereum'),
-                token: (CasperSDK as any).CLValueBuilder.key(zeroKey),
+                token: zeroKey,
                 recipient: (CasperSDK as any).CLValueBuilder.string(recipient),
                 amount: (CasperSDK as any).CLValueBuilder.u256(amountInMotesBigInt.toString()),
                 attached_value: (CasperSDK as any).CLValueBuilder.u512(amountInMotesBigInt.toString())
